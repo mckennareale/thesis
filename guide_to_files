@@ -1,0 +1,6 @@
+Guide to files:
+
+- each file is named with its short name (ex: "bleomycin"), followed by its accession number in the GEO database for easy tracking back to its original paper
+- within each file is an RData file called "*short_name*_workspace" to allow for easier loading of the workspace as it was last left
+  - loading this loads the Seurat objects and any saved files necessary for analysis of that dataset
+- I keep the file names the same as when I downloaded them from GEO, and I don't modify the individual barcodes, features, or matrix files at all. I just load them directly into the own objects in R and modify them only there
