@@ -1,2 +1,6 @@
 # thesis
-Contains bleo data analysis files
+Main branch contains:
+- README
+- flu branch
+- qPCR branch
+- flow branch
