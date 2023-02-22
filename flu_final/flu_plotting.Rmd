@@ -1,0 +1,34 @@
+---
+title: "flu_plotting"
+output: github_document
+date: '2023-02-17'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries for plotting}
+library(Seurat)
+library(tidyverse)
+library(cowplot)
+# load workspace with objects
+load("~/thesis/flu data and prelim analysis/flu_integrated_ws.RData")
+```
+
+
+# Plot out MHC I, II expression
+```{r}
+VlnPlot(flu.integrated.all, features = "MHCI_genes1", group.by = "celltype", split.by = "timepoint", pt.size = 0)
+```
+
+```{r}
+DoHeatmap(flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1")) + NoLegend()
+RidgePlot(object = flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1"))
+VlnPlot(flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1"), pt.size = 0)
+```
+
+```{r}
+FeaturePlot(flu.integrated.all, features = c("Siglecf", "Pparg", "Epcam"), max.cutoff = 3, cols = c("grey", "red"), order = T, split.by = "timepoint", label = TRUE)
+VlnPlot(flu.integrated.all, features = c("Siglecf", "Pparg", "Epcam"), pt.size = 0, split.by = "timepoint", group.by = "celltype")
+```
