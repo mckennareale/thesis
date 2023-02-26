@@ -1,4 +1,4 @@
 # Massive Migration: The Role of Tissue-Resident Alveolar Macrophages in Inducible Bronchus-Associated Lymphoid Tissue Formation and Function
-- scRNA-seq: code to perform analysis and generate plots
-- qPCR folder: spreadsheets with qPCR data
-- sorting folder: schematic of sorting strategy for sorted qPCR
+- cell_sorting: schematic of sorting strategy for sorted qPCR
+- qPCR: spreadsheets with qPCR data
+- scRNA_seq: code to perform analysis and generate plots
