@@ -3,7 +3,7 @@ title: "flu_merged"
 output: github_document
 date: '2023-03-01'
 ---
-Contains script for merging time point data, regressing out cell cycle information, clustering the cells, and finding markers for each cluster
+Contains script for merging time point data, regressing out cell cycle information, clustering the cells, and finding markers for each cluster.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -104,7 +104,6 @@ flu.integrated.all <- IntegrateData(anchorset = flu.anchors.all, dims = 1:30)
 # Reordering the merged object so the timepoints are in chronological order
 flu.integrated.all$timepoint<- factor(flu.integrated.all$timepoint, levels = c("d0", "d7", "d14", "d30"))
 flu.integrated.all$orig.ident<- factor(flu.integrated.all$orig.ident, levels = c("d0", "d7", "d14", "d30"))
-flu.integrated.all$celltype <- factor(flu.integrated.all$orig.ident, levels = c("AM_1", "AM_2", "AM_3", "AM_4", "IM_1", "IM_2", "IM_3", "IM_4", "IM_5", "Mono_1", "Mono_2", "Mono_3", "Mono_4"))
 ```
 
 ```{r}
@@ -137,8 +136,8 @@ flu.integrated.all <- FindClusters(flu.integrated.all, resolution = 0.5)
 ```
 
 ```{r}
-# Visualization
-p1 <- DimPlot(flu.integrated.all, reduction = "umap", group.by = "timepoint")
+# Visualize clusters
+p1 <- DimPlot(flu.integrated.all, reduction = "umap", group.by = "timepoint") + ggitle("")
 p2 <- DimPlot(flu.integrated.all, reduction = "umap", label = TRUE)
 plot_grid(p1, p2)
 DimPlot(flu.integrated.all, split.by = "timepoint")
@@ -149,31 +148,51 @@ DimPlot(flu.integrated.all, split.by = "timepoint")
 flu.all.markers <- FindAllMarkers(flu.integrated.all, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 ```
 
-# Identifying clusters
-```{r identifying AMs based on Pparg, SiglecF, and Epcam expression}
-FeaturePlot(flu.integrated.all, features = c("Pparg", "Siglecf", "Epcam"), max.cutoff = 3, cols = c("grey", "red"), order = T)
-```
+# Identifying cell types
 
-```{r identifying IMs based on C1qa, C1qb, C1qc expression}
-FeaturePlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), max.cutoff = 3, cols = c("grey", "red"), order = T)
-VlnPlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), pt.size = 0)
+```{r plotting markers from this review}
+# https://www.sciencedirect.com/science/article/pii/S1074761322004034?ref=pdf_download&fr=RR-2&rr=7a4c14ed1be93051
+FeaturePlot(flu.integrated.all, features = c("Chil3", "Fabp5", "Flt1", "Pparg", "Fabp4", "Siglecf", "Car4", "Ear1", "Krt79"), max.cutoff = 3, cols = c("grey", "red"), order = T)
+VlnPlot(flu.integrated.all, features = AM_genes, pt.size = 0)
+RidgePlot(flu.integrated.all, features = AM_genes)
+
+# Alveolar macrophages
+AM_genes <- c("Flt1", "Pparg", "Fabp4", "Siglecf", "Car4", "Ear1", "Krt79")
+FeaturePlot(flu.integrated.all, features = AM_genes, max.cutoff = 3, cols = c("grey", "red"), order = T, split.by = "timepoint")
+VlnPlot(flu.integrated.all, features = AM_genes, pt.size = 0)
+
+# Interstitial macrophages
+IM_genes <- c("C1qa", "C1qb", "C1qc", "Pf4", "C5ar1", "Apoe", "Cd14", "Csf1r", "Mafb")
+VlnPlot(flu.integrated.all, features = IM_genes, pt.size =0)
+
+#Proliferating AMs
+VlnPlot(flu.integrated.all, features = c("Stmn", "Mki67", "Pclaf", "Top2a"), pt.size = 0)
+
+#AMs with markers from Li et. al
+VlnPlot(flu.integrated.all, features = c("Chil3", "Lpl", "Cd9", "Wfdc21", "Krt79", "Ear1", "Ear2", "Abcg1", "Plet1", "Mrc1"), pt.size = 0)
+
+#Ly6Clo monocytes
+VlnPlot(flu.integrated.all, features = c("Ace", "Adgre4"), pt.size = 0)
+FeaturePlot(flu.integrated.all, features = c("Ace", "Adgre4"), cols = c("grey", "red"), order = T)
+
+#Ly6Chi monocytes
+VlnPlot(flu.integrated.all, features = c("Fn1", "Klf2", "Ifitm6"), pt.size = 0)
+FeaturePlot(flu.integrated.all, features = c("Fn1", "Klf2", "Ifitm6"), cols = c("grey", "red"), order = T)
+VlnPlot(flu.integrated.all, features = mono_genes, pt.size = 0) #0, 3, 6, 10
+
+#trans mac
+#should downregulate between d7-d14
+VlnPlot(flu.integrated.all, features = c("Ly6c2", "Ccr2"), pt.size = 0, split.by = "timepoint")
+VlnPlot(flu.integrated.all, features = c("Ly6c2", "Ccr2", "Cd74", "H2-Eb1", "H2-Ab1", "H2-Aa"), pt.size = 0, split.by = "timepoint")
 ```
 
 ```{r}
-# Relabel cell types with their identities
-cluster.ids <- c("Mono_1", "AM_1", "IM_1", "Mono_2", "IM_2", "IM_3", "Mono_3", "AM_2", "AM_3", "IM_4", "Mono_4", "AM_4", "IM_5")
+# Label cell types with their identities
+cluster.ids <- c("Ly6c_hi_monocytes", "AMs", "trans_macs", "Ly6c_lo_monocytes", "trans_macs", "trans_macs", "Ly6c_hi_monocytes", "proliferating_AMs", "AMs", "trans_macs", "Ly6c_hi_monocytes", "AMs", "trans_macs")
 names(cluster.ids) <- levels(flu.integrated.all)
 flu.integrated.all <- RenameIdents(flu.integrated.all, cluster.ids)
 flu.integrated.all$celltype <- Idents(flu.integrated.all)
 DimPlot(flu.integrated.all, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
-```
-
-# In labeling the rest of the clusters, I noticed that clusters 11 and 14 were small contaminants of B and T cells, respectively. Removing these clusters since they're not needed:
-
-```{r}
-Idents(flu.integrated.all) <- "celltype"
-flu.integrated.all <- subset(flu.integrated.all, idents = c("Mono_1", "Mono_2", "Mono_3", "IM_1", "IM_2", "IM_3", "IM_4", "IM_5", "AM_1", "AM_2", "AM_3", "AM_4"))
-DimPlot(flu.integrated.all, reduction = "umap", label = TRUE, pt.size = 0.5)
 ```
 
 ```{r create a column with cell type and timepoint}
@@ -183,7 +202,17 @@ Idents(flu.integrated.all) <- "celltype.time"
 View(flu.integrated.all@meta.data)
 ```
 
+# In labeling the rest of the clusters, I noticed that clusters 11 and 14 were small contaminants of B and T cells, respectively. I removed these clusters because they were not needed.
+
+```{r create a column with cell type and timepoint}
+flu.integrated.all$celltype <- Idents(flu.integrated.all)
+flu.integrated.all$celltype.time <- paste(Idents(flu.integrated.all), flu.integrated.all$timepoint, sep = "_")
+Idents(flu.integrated.all) <- "celltype.time"
+View(flu.integrated.all@meta.data)
+```
+
 # Incorporate MHC I, II gene expression information
+
 ```{r add module score for MHC I, II to the integrated object}
 # Using tutorial from https://github.com/satijalab/seurat/issues/3521
 # MHC I
@@ -192,273 +221,36 @@ flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(MHC_I_u
 flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(MHC_II_unique), name = "MHCII_genes", assay = "RNA")
 ```
 
-
-```{r}
-# Adding module score for cathepsin genes
-flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(cathepsin_genes), name = "Cathepsins", assay = "RNA")
-```
-
-
-```{r create a copy object to use for plotting}
-flu.plotting.copy <- subset(flu.integrated.all, idents = c("AM_1", "AM_2", "AM_3", "AM_4"))
-flu.plotting.copy$AMs <- "Alveolar Macrophage"
-
-AM_1 <- subset(flu.plotting.copy, idents = c("AM_1"))
-AM_2 <- subset(flu.plotting.copy, idents = c("AM_2"))
-AM_3 <- subset(flu.plotting.copy, idents = c("AM_3"))
-AM_4 <- subset(flu.plotting.copy, idents = c("AM_4"))
-```
-
-
----
-title: "flu_plotting"
-output: github_document
-date: '2023-02-17'
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r load libraries for plotting}
-library(Seurat)
-library(tidyverse)
-library(cowplot)
-# load workspace with objects
-load("~/thesis/flu data and prelim analysis/flu_integrated_ws.RData")
-```
-
-```{r alveolar macrophages}
-Idents (flu.integrated.all) <- "old.ident"
-FeaturePlot(flu.integrated.all, features = c("Pparg", "Siglecf"), cols = c("grey", "red"), order = T, label = TRUE)
-VlnPlot(flu.integrated.all, features = c("Siglecf", "Pparg"), group.by = "old.ident", pt.size = 0)
-```
-
-```{r interstitial macrophages}
-Idents (flu.integrated.all) <- "old.ident"
-FeaturePlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), cols = c("grey", "red"), order = T, label = TRUE)
-VlnPlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), group.by = "old.ident", pt.size = 0)
-```
-
-
-
-# Plot out MHC I, II expression
-```{r MHC I genes}
-VlnPlot(flu.integrated.all, features = "MHCI_genes1", group.by = "celltype", split.by = "timepoint", pt.size = 0)
-```
-
-```{r}
-DoHeatmap(flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1")) + NoLegend()
-RidgePlot(object = flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1"))
-VlnPlot(flu.plotting.copy, features = c("Ccr5", "H2-Aa", "H2-Eb1"), pt.size = 0)
-```
-
-```{r}
-FeaturePlot(flu.integrated.all, features = c("Siglecf", "Pparg", "Epcam"), max.cutoff = 3, cols = c("grey", "red"), order = T, split.by = "timepoint", label = TRUE)
-VlnPlot(flu.integrated.all, features = c("Siglecf", "Pparg", "Epcam"), pt.size = 0, split.by = "timepoint", group.by = "celltype")
-```
-
-```{r}
+```{r plot MHC I, II genes}
 MHCI_vln_plot <- VlnPlot(flu.plotting.copy, features = c("MHCI_genes1"), group.by = "timepoint", pt.size = 0) + ggtitle("MHC I")
 MHCII_vln_plot <- VlnPlot(flu.plotting.copy, features = c("MHCII_genes1"), group.by = "timepoint", pt.size = 0) + ggtitle("MHC II")
 plot_grid(MHCI_vln_plot, MHCII_vln_plot, nrow = 2)
 ```
 
----
-title: "flu_merged"
-output: github_document
----
-Contains script for merging time point data, regressing out cell cycle information, clustering the cells, and finding markers for each cluster
 
-# Setting up and integrating Seurat objects
+# Setting up objects for plotting
 
-```{r loading libraries}
-library(Seurat)
-library(cowplot)
-library(tidyverse)
-```
+```{r}
+Idents(flu.integrated.all) <- "timepoint"
+# Make an object with all cell types but no d7
+flu.trimmed <- subset(flu.integrated.all, idents = c("d0", "d14", "d30"))
 
-```{r naive setup}
-# Naive
-naive_mat <- Matrix::readMM(file = "~/thesis/flu_GSE202002/flu_data/GSM6086518_Lung_mf_mo_naive_matrix.mtx.gz")
-naive_genes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086518_Lung_mf_mo_naive_features.tsv.gz")
-naive_genes.names <- naive_genes[['V2']]
-naive_barcodes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086518_Lung_mf_mo_naive_barcodes.tsv.gz")
-naive_barcodes.names <- naive_barcodes[['V1']]
-colnames(naive_mat) <- naive_barcodes.names
-rownames(naive_mat) <- naive_genes.names
-naive_SO <- CreateSeuratObject(naive_mat, min.cells = 5)
-naive_SO$orig.ident <- "d0"
-naive_SO$timepoint <- "d0"
-naive_length <- length(naive_SO@active.ident)
-```
+# Make an object with just AMs and proliferating AMs for plotting
+Idents(flu.trimmed) <- "celltype"
+flu.plotting.copy <- subset(flu.trimmed, idents = c("AMs", "proliferating_AMs"))
 
-```{r d7}
-# d7
-d7_mat <- Matrix::readMM(file = "~/thesis/flu_GSE202002/flu_data/GSM6086519_Lung_mf_mo_flu_d7_matrix.mtx.gz")
-# Reading in the genes and formatting the resulting dataframe
-d7_genes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086519_Lung_mf_mo_flu_d7_features.tsv.gz")
-d7_genes.names <- d7_genes[['V2']]
-d7_barcodes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086519_Lung_mf_mo_flu_d7_barcodes.tsv.gz")
-d7_barcodes.names <- d7_barcodes[['V1']]
-colnames(d7_mat) <- d7_barcodes.names
-rownames(d7_mat) <- d7_genes.names
-d7_SO <- CreateSeuratObject(d7_mat, min.cells = 5)
-d7_SO$orig.ident <- "d7"
-d7_SO$timepoint <- "d7"
-d7_length <- length(d7_SO@active.ident)
-```
+# Make another object with AMs and proliferating AMs aggregated together in the same column
+flu.bulk.AMs <- flu.trimmed
+flu.bulk.AMs$bulk_AMs <- "bulk_AMs"
+Idents(flu.bulk.AMs) <- "bulk_AMs"
+flu.bulk.AMs$bulk_AMs.time <- paste(Idents(flu.bulk.AMs), flu.bulk.AMs$timepoint, sep = "_")
 
-```{r d14}
-# d14
-d14_mat <- Matrix::readMM(file = "~/thesis/flu_GSE202002/flu_data/GSM6086520_Lung_mf_mo_flu_d14_matrix.mtx.gz")
-# Reading in the genes and formatting the resulting dataframe
-d14_genes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086520_Lung_mf_mo_flu_d14_features.tsv.gz")
-d14_genes.names <- d14_genes[['V2']]
-d14_barcodes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086520_Lung_mf_mo_flu_d14_barcodes.tsv.gz")
-d14_barcodes.names <- d14_barcodes[['V1']]
-colnames(d14_mat) <- d14_barcodes.names
-rownames(d14_mat) <- d14_genes.names
-d14_SO <- CreateSeuratObject(d14_mat, min.cells = 5)
-d14_SO$orig.ident <- "d14"
-d14_SO$timepoint <- "d14"
-d14_length <- length(d14_SO@active.ident)
-```
-
-```{r day 30}
-# d30
-d30_mat <- Matrix::readMM(file = "~/thesis/flu_GSE202002/flu_data/GSM6086521_Lung_mf_mo_flu_d30_matrix.mtx.gz")
-# Reading in the genes and formatting the resulting dataframe
-d30_genes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086521_Lung_mf_mo_flu_d30_features.tsv.gz")
-d30_genes.names <- d30_genes[['V2']]
-d30_barcodes <- read.table(file = "~/thesis/flu_GSE202002/flu_data/GSM6086521_Lung_mf_mo_flu_d30_barcodes.tsv.gz")
-d30_barcodes.names <- d30_barcodes[['V1']]
-colnames(d30_mat) <- d30_barcodes.names
-rownames(d30_mat) <- d30_genes.names
-d30_SO <- CreateSeuratObject(d30_mat, min.cells = 5)
-d30_SO$orig.ident <- "d30"
-d30_SO$timepoint <- "d30"
-d30_length <- length(d30_SO@active.ident)
-```
-
-```{r pre-processing and integrating Seurat objects}
-# Make the "flu list" - a combined list of all the objects to merge
-flu.list <- c(naive_SO, d7_SO, d14_SO, d30_SO)
-# Iterate through each object in the list to pre-process it
-for (i in 1:length(flu.list)) {
-    flu.list[[i]] <- subset (flu.list[[i]], nFeature_RNA > 500)
-    flu.list[[i]] <- NormalizeData(flu.list[[i]], verbose = TRUE)
-    flu.list[[i]] <- FindVariableFeatures(flu.list[[i]], selection.method = "vst", 
-        nfeatures = 2000, verbose = TRUE)
-}
-# Making the anchor dataset
-flu.anchors.all <- FindIntegrationAnchors(object.list = flu.list, dims = 1:30)
-# Using the anchor dataset to create a final merged object
-flu.integrated.all <- IntegrateData(anchorset = flu.anchors.all, dims = 1:30)
-```
-
-# Processing integrated object, regressing out cell cycle information
-
-```{r take flu.integrated.all object loaded in from workspace}
-# Reordering the merged object so the timepoints are in chronological order
-flu.integrated.all$timepoint<- factor(flu.integrated.all$timepoint, levels = c("d0", "d7", "d14", "d30"))
-flu.integrated.all$orig.ident<- factor(flu.integrated.all$orig.ident, levels = c("d0", "d7", "d14", "d30"))
-flu.integrated.all$celltype <- factor(flu.integrated.all$orig.ident, levels = c("AM_1", "AM_2", "AM_3", "AM_4", "IM_1", "IM_2", "IM_3", "IM_4", "IM_5", "Mono_1", "Mono_2", "Mono_3", "Mono_4"))
+# Make one last object with IMs subset out
+flu.no.IMs <- subset(flu.bulk.AMs, Itgax > 1 && Itgam < 1)
 ```
 
 ```{r}
-# Perform the initilization steps on the integrated Seurat object
-DefaultAssay(flu.integrated.all) <- "integrated" # set DefaultAssay to "integrated"
-flu.integrated.all <- FindVariableFeatures(flu.integrated.all, selection.method = "vst")
-flu.integrated.all <- ScaleData(flu.integrated.all, features = rownames(flu.integrated.all))
+# Find markers for cell types in the flu.trimmed object
+Idents(flu.trimmed) <- "celltype"
+flu.trimmed.markers <- FindAllMarkers(flu.trimmed, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 ```
-
-```{r regress out cell cycle info}
-# Cell cycle score the data
-flu.integrated.all <- CellCycleScoring(flu.integrated.all, s.features = sgenes, g2m.features = g2mgenes, set.ident = TRUE)
-# view cell cycle scores and phase assignments
-head(flu.integrated.all[[]])
-# Visualize the distribution of cell cycle markers across
-RidgePlot(flu.integrated.all, features = c("Pcna", "Top2a", "Mcm6", "Mki67"), ncol = 2)
-# Regress out cell cycle information
-flu.integrated.all <- ScaleData(flu.integrated.all, vars.to.regress = c("S.Score", "G2M.Score"), features = rownames(flu.integrated.all))
-```
-
-```{r}
-# Complete the rest of the processing steps now that we've regressed out cell cycle info
-flu.integrated.all <- RunPCA(flu.integrated.all, features = VariableFeatures(flu.integrated.all), nfeatures.print = 10)
-flu.integrated.all <- RunUMAP(flu.integrated.all, reduction = "pca", dims = 1:30)
-flu.integrated.all <- FindNeighbors(flu.integrated.all, reduction = "pca", dims = 1:30)
-flu.integrated.all <- FindClusters(flu.integrated.all, resolution = 0.5)
-```
-
-```{r}
-# Visualization
-p1 <- DimPlot(flu.integrated.all, reduction = "umap", group.by = "timepoint")
-p2 <- DimPlot(flu.integrated.all, reduction = "umap", label = TRUE)
-plot_grid(p1, p2)
-DimPlot(flu.integrated.all, split.by = "timepoint")
-```
-
-```{r}
-# Find markers for the clusters in the flu.integrated.all object
-flu.all.markers <- FindAllMarkers(flu.integrated.all, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-```
-
-# Identifying clusters
-```{r identifying AMs based on Pparg, SiglecF, and Epcam expression}
-FeaturePlot(flu.integrated.all, features = c("Pparg", "Siglecf", "Epcam"), max.cutoff = 3, cols = c("grey", "red"), order = T)
-```
-
-```{r identifying IMs based on C1qa, C1qb, C1qc expression}
-FeaturePlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), max.cutoff = 3, cols = c("grey", "red"), order = T)
-VlnPlot(flu.integrated.all, features = c("C1qa", "C1qb", "C1qc"), pt.size = 0)
-```
-
-```{r}
-# Relabel cell types with their identities
-cluster.ids <- c("Mono_1", "AM_1", "IM_1", "Mono_2", "IM_2", "IM_3", "Mono_3", "AM_2", "AM_3", "IM_4", "Mono_4", "AM_4", "IM_5")
-names(cluster.ids) <- levels(flu.integrated.all)
-flu.integrated.all <- RenameIdents(flu.integrated.all, cluster.ids)
-flu.integrated.all$celltype <- Idents(flu.integrated.all)
-DimPlot(flu.integrated.all, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
-```
-
-In labeling the rest of the clusters, I noticed that clusters 11 and 14 were small contaminants of B and T cells, respectively. Removing these clusters since they're not needed:
-
-```{r}
-Idents(flu.integrated.all) <- "celltype"
-flu.integrated.all <- subset(flu.integrated.all, idents = c("Mono_1", "Mono_2", "Mono_3", "IM_1", "IM_2", "IM_3", "IM_4", "IM_5", "AM_1", "AM_2", "AM_3", "AM_4"))
-DimPlot(flu.integrated.all, reduction = "umap", label = TRUE, pt.size = 0.5)
-```
-
-```{r create a column with cell type and timepoint}
-flu.integrated.all$celltype <- Idents(flu.integrated.all)
-flu.integrated.all$celltype.time <- paste(Idents(flu.integrated.all), flu.integrated.all$timepoint, sep = "_")
-Idents(flu.integrated.all) <- "celltype.time"
-View(flu.integrated.all@meta.data)
-```
-
-# Incorporate MHC I, II gene expression information
-```{r add module score for MHC I, II to the integrated object}
-# Using tutorial from https://github.com/satijalab/seurat/issues/3521
-# MHC I
-flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(MHC_I_unique), name = "MHCI_genes", assay = "RNA")
-# MHC II
-flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(MHC_II_unique), name = "MHCII_genes", assay = "RNA")
-```
-
-
-```{r}
-# Adding module score for cathepsin genes
-flu.integrated.all <- AddModuleScore(flu.integrated.all, features = list(cathepsin_genes), name = "Cathepsins", assay = "RNA")
-```
-
-
-```{r create a copy object to use for plotting}
-flu.plotting.copy <- subset(flu.integrated.all, idents = c("AM_1", "AM_2", "AM_3", "AM_4"))
-flu.plotting.copy$AMs <- "Alveolar Macrophage"
-AM_1 <- subset(flu.plotting.copy, idents = c("AM_1"))
-AM_2 <- subset(flu.plotting.copy, idents = c("AM_2"))
-AM_3 <- subset(flu.plotting.copy, idents = c("AM_3"))
-AM_4 <- subset(flu.plotting.copy, idents = c("AM_4"))
